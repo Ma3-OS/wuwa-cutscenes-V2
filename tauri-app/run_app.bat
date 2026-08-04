@@ -1,0 +1,6 @@
+@echo off
+title Wuwa Cutscenes - Developer Mode
+echo Starting Wuwa Cutscenes App (Development Mode)...
+echo Please wait while the app compiles...
+npm run tauri dev
+pause

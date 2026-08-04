@@ -1,0 +1,31 @@
+[package]
+name = "unpak"
+authors = ["spuds"]
+repository = "https://github.com/bananaturtlesandwich/unpak"
+description = "a no-nonsense unreal pak parsing crate"
+license = "MIT OR Apache-2.0"
+keywords = ["modding", "parsing"]
+categories = ["filesystem", "parser-implementations"]
+version = "1.0.5"
+edition = "2021"
+
+[features]
+default = ["encryption", "compression"]
+# for tools targeting games without encrypted or compressed paks
+encryption = ["dep:aes"]
+compression = ["dep:flate2"]
+oodle = ["compression"]
+# for tools getting paths straight from uasset imports
+asset-paths = []
+
+[dependencies]
+byteorder = "1.4"
+strum = { version = "0.24", features = ["derive"] }
+aes = { version = "0.8", optional = true }
+flate2 = { version = "1.0", optional = true }
+hashbrown = "0.13"
+thiserror = "1.0"
+
+[dev-dependencies]
+rayon = "1.7"
+hex = "0.4"

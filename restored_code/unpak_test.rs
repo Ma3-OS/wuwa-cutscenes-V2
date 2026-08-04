@@ -1,0 +1,1 @@
+"use unpak::Pak;\nuse std::fs::File;\n\nfn main() {\n    let file = File::open(\"test.pak\").unwrap();\n    let pak = Pak::new(file);\n}"
