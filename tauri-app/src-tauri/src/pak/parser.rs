@@ -266,7 +266,6 @@ pub fn extract_file(
     }
     
     file.seek(SeekFrom::Start(entry.offset))?;
-    
     // Check if the offset points to FPakEntry or directly to raw data
     // In standard UE4, the first 8 bytes of FPakEntry is the offset itself.
     let mut offset_check = [0u8; 8];
@@ -294,7 +293,6 @@ pub fn extract_file(
         // It already points to the raw data (Wuthering Waves custom format)
         data_offset = entry.offset;
     }
-
     
     file.seek(SeekFrom::Start(data_offset))?;
     
