@@ -297,8 +297,12 @@ pub fn extract_file(
     file.seek(SeekFrom::Start(data_offset))?;
     
     // Safety check for EOF
+    // Wuthering Waves encrypts the payload even if the entry's is_encrypted flag is false,
+    // as long as the pak itself is encrypted (has a key).
+    let should_decrypt = entry.is_encrypted || key_used.is_some();
+    
     let mut bytes_to_read = entry.size as usize;
-    if entry.is_encrypted {
+    if should_decrypt {
         bytes_to_read = (bytes_to_read + 15) & !15;
     }
     
@@ -310,7 +314,7 @@ pub fn extract_file(
         return Err(PakError::ParseError(format!("Failed reading payload ({} bytes at offset {}): {}", read_len, data_offset, e)));
     }
     
-    if entry.is_encrypted {
+    if should_decrypt {
         if let Some(key) = key_used {
             decrypt_bytes(key, &mut data)?;
             data.truncate(entry.uncompressed_size as usize);
