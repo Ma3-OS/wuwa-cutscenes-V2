@@ -110,8 +110,7 @@ pub fn parse_pak(path: &str, key_manager: &KeyManager) -> Result<PakFile, PakErr
     file.read_exact(&mut index_data)?;
     
     let actual_key = key_manager.get_key_for_guid(&guid);
-    let mut key_used = None;
-
+    
     if info.encrypted_index {
         decrypt_bytes(&actual_key, &mut index_data)?;
         
@@ -121,8 +120,10 @@ pub fn parse_pak(path: &str, key_manager: &KeyManager) -> Result<PakFile, PakErr
         if result.as_slice() != index_hash {
             return Err(PakError::DecryptionFailed);
         }
-        key_used = Some(actual_key.to_vec());
     }
+    
+    // Always provide the key to the payload extractor since Wuthering Waves payloads are always encrypted
+    let mut key_used = Some(actual_key.to_vec());
     
     let mut idx_cur = Cursor::new(index_data.as_slice());
     let mount_point = match read_string(&mut idx_cur) {
