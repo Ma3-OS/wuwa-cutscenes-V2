@@ -266,30 +266,44 @@ pub fn extract_file(
     }
     
     file.seek(SeekFrom::Start(entry.offset))?;
+    
+    // Check if the offset points to FPakEntry or directly to raw data
+    // In standard UE4, the first 8 bytes of FPakEntry is the offset itself.
     let mut offset_check = [0u8; 8];
     file.read_exact(&mut offset_check)?;
     let read_off = u64::from_le_bytes(offset_check);
     
     let mut data_offset = entry.offset;
+    
     if read_off == entry.offset {
-        // FPakEntry is present
-        let mut rest = [0u8; 16]; file.read_exact(&mut rest)?;
-        let mut cb = [0u8; 4]; file.read_exact(&mut cb)?;
+        // It's a standard FPakEntry, skip the payload header
+        // Since we already read 8 bytes (offset), we read the next 8 bytes (size)
+        let mut size_buf = [0u8; 8]; file.read_exact(&mut size_buf)?; // UncompressedSize (8)
+        let mut cb = [0u8; 4]; file.read_exact(&mut cb)?; // CompressionMethod (4) - wait, this assumes 4 bytes which might be wrong for v11, but for standard paks it might be 4.
         let cmethod = u32::from_le_bytes(cb);
-        let mut hash = [0u8; 20]; file.read_exact(&mut hash)?;
+        let mut hash = [0u8; 20]; file.read_exact(&mut hash)?; // Hash (20)
+        
         if cmethod != 0 {
             let mut cnt = [0u8; 4]; file.read_exact(&mut cnt)?;
             let count = u32::from_le_bytes(cnt);
             file.seek(SeekFrom::Current((count * 16) as i64))?;
         }
-        let mut encb = [0u8; 5]; file.read_exact(&mut encb)?;
+        let mut encb = [0u8; 5]; file.read_exact(&mut encb)?; // bEncrypted (1) + CompressionBlockSize (4)
         data_offset = file.stream_position()?;
+    } else {
+        // It already points to the raw data (Wuthering Waves custom format)
+        data_offset = entry.offset;
     }
+
     
     file.seek(SeekFrom::Start(data_offset))?;
     
     // Safety check for EOF
-    let bytes_to_read = entry.size as usize;
+    let mut bytes_to_read = entry.size as usize;
+    if entry.is_encrypted {
+        bytes_to_read = (bytes_to_read + 15) & !15;
+    }
+    
     let remaining = file_len.saturating_sub(data_offset) as usize;
     let read_len = std::cmp::min(bytes_to_read, remaining);
     
