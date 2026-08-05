@@ -266,25 +266,20 @@ pub fn extract_file(
     }
     
     file.seek(SeekFrom::Start(entry.offset))?;
-    let mut offset_check = [0u8; 8];
-    file.read_exact(&mut offset_check)?;
-    let read_off = u64::from_le_bytes(offset_check);
     
-    let mut data_offset = entry.offset;
-    if read_off == entry.offset {
-        // FPakEntry is present
-        let mut rest = [0u8; 16]; file.read_exact(&mut rest)?;
-        let mut cb = [0u8; 4]; file.read_exact(&mut cb)?;
-        let cmethod = u32::from_le_bytes(cb);
-        let mut hash = [0u8; 20]; file.read_exact(&mut hash)?;
-        if cmethod != 0 {
-            let mut cnt = [0u8; 4]; file.read_exact(&mut cnt)?;
-            let count = u32::from_le_bytes(cnt);
-            file.seek(SeekFrom::Current((count * 16) as i64))?;
-        }
-        let mut encb = [0u8; 5]; file.read_exact(&mut encb)?;
-        data_offset = file.stream_position()?;
+    // FPakEntry is always present before the actual payload
+    let mut size_buf = [0u8; 16]; file.read_exact(&mut size_buf)?; // Size (8) + UncompressedSize (8)
+    let mut cb = [0u8; 4]; file.read_exact(&mut cb)?; // CompressionMethod (4)
+    let cmethod = u32::from_le_bytes(cb);
+    let mut hash = [0u8; 20]; file.read_exact(&mut hash)?; // Hash (20)
+    
+    if cmethod != 0 {
+        let mut cnt = [0u8; 4]; file.read_exact(&mut cnt)?;
+        let count = u32::from_le_bytes(cnt);
+        file.seek(SeekFrom::Current((count * 16) as i64))?;
     }
+    let mut encb = [0u8; 5]; file.read_exact(&mut encb)?; // bEncrypted (1) + CompressionBlockSize (4)
+    let data_offset = file.stream_position()?;
     
     file.seek(SeekFrom::Start(data_offset))?;
     
